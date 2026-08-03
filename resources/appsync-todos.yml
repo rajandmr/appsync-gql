@@ -1,0 +1,174 @@
+Resources:
+  TodosGraphQLApi:
+    Type: AWS::AppSync::GraphQLApi
+    Properties:
+      Name: appsync-gql-todos
+      AuthenticationType: API_KEY
+      LogConfig:
+        CloudWatchLogsRoleArn: !GetAtt AppSyncLogsRole.Arn
+        FieldLogLevel: ALL
+      AdditionalAuthenticationProviders:
+        - AuthenticationType: AWS_IAM
+      XrayEnabled: false
+
+  TodosGraphQLApiKey:
+    Type: AWS::AppSync::ApiKey
+    Properties:
+      ApiId: !GetAtt TodosGraphQLApi.ApiId
+      Description: API key for the Todos GraphQL API
+
+  TodosGraphQLSchema:
+    Type: AWS::AppSync::GraphQLSchema
+    Properties:
+      ApiId: !GetAtt TodosGraphQLApi.ApiId
+      Definition: |
+        type Todo {
+          id: ID!
+          title: String!
+          completed: Boolean!
+        }
+
+        type Query {
+          listTodos: [Todo]
+          getTodo(id: ID!): Todo
+        }
+
+        type Mutation {
+          createTodo(title: String!, completed: Boolean): Todo
+          updateTodo(id: ID!, title: String, completed: Boolean): Todo
+          deleteTodo(id: ID!): Todo
+        }
+
+        schema {
+          query: Query
+          mutation: Mutation
+        }
+
+  # ---- Data sources: one AppSync LAMBDA data source per resolver function ----
+
+  TodosCreateTodoDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt TodosGraphQLApi.ApiId
+      Name: TodoCreateTodo
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt CreateTodoLambdaFunction.Arn
+      ServiceRoleArn: !GetAtt AppSyncTodosServiceRole.Arn
+
+  TodosGetTodoDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt TodosGraphQLApi.ApiId
+      Name: TodoGetTodo
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt GetTodoLambdaFunction.Arn
+      ServiceRoleArn: !GetAtt AppSyncTodosServiceRole.Arn
+
+  TodosListTodosDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt TodosGraphQLApi.ApiId
+      Name: TodoListTodos
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt ListTodosLambdaFunction.Arn
+      ServiceRoleArn: !GetAtt AppSyncTodosServiceRole.Arn
+
+  TodosUpdateTodoDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt TodosGraphQLApi.ApiId
+      Name: TodoUpdateTodo
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt UpdateTodoLambdaFunction.Arn
+      ServiceRoleArn: !GetAtt AppSyncTodosServiceRole.Arn
+
+  TodosDeleteTodoDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt TodosGraphQLApi.ApiId
+      Name: TodoDeleteTodo
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt DeleteTodoLambdaFunction.Arn
+      ServiceRoleArn: !GetAtt AppSyncTodosServiceRole.Arn
+
+  # ---- Resolvers ----
+
+  TodosQueryListResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt TodosGraphQLApi.ApiId
+      TypeName: Query
+      FieldName: listTodos
+      DataSourceName: !GetAtt TodosListTodosDataSource.Name
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": $util.toJson($context)
+        }
+      ResponseMappingTemplate: "$util.toJson($context.result)"
+
+  TodosQueryGetResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt TodosGraphQLApi.ApiId
+      TypeName: Query
+      FieldName: getTodo
+      DataSourceName: !GetAtt TodosGetTodoDataSource.Name
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": $util.toJson($context)
+        }
+      ResponseMappingTemplate: "$util.toJson($context.result)"
+
+  TodosCreateResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt TodosGraphQLApi.ApiId
+      TypeName: Mutation
+      FieldName: createTodo
+      DataSourceName: !GetAtt TodosCreateTodoDataSource.Name
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": $util.toJson($context)
+        }
+      ResponseMappingTemplate: "$util.toJson($context.result)"
+
+  TodosUpdateResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt TodosGraphQLApi.ApiId
+      TypeName: Mutation
+      FieldName: updateTodo
+      DataSourceName: !GetAtt TodosUpdateTodoDataSource.Name
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": $util.toJson($context)
+        }
+      ResponseMappingTemplate: "$util.toJson($context.result)"
+
+  TodosDeleteResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt TodosGraphQLApi.ApiId
+      TypeName: Mutation
+      FieldName: deleteTodo
+      DataSourceName: !GetAtt TodosDeleteTodoDataSource.Name
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": $util.toJson($context)
+        }
+      ResponseMappingTemplate: "$util.toJson($context.result)"

@@ -1,0 +1,28 @@
+Outputs:
+  TodosGraphQLApiUrl:
+    Description: GraphQL endpoint URL for the Todos API
+    Value: !GetAtt TodosGraphQLApi.GraphQLUrl
+
+  TodosGraphQLApiKey:
+    Description: API key for the Todos GraphQL API
+    Value: !GetAtt TodosGraphQLApiKey.ApiKey
+
+  OrdersGraphQLApiUrl:
+    Description: GraphQL endpoint URL for the Orders API
+    Value: !GetAtt OrdersGraphQLApi.GraphQLUrl
+
+  OrdersGraphQLApiKey:
+    Description: API key for the Orders GraphQL API (read-only)
+    Value: !GetAtt OrdersGraphQLApiKey.ApiKey
+
+  OrdersUserPoolId:
+    Description: ID of the Cognito User Pool backing the Orders API
+    Value: !Ref OrdersUserPool
+
+  OrdersUserPoolClientId:
+    Description: Client ID of the Cognito User Pool backing the Orders API
+    Value: !Ref OrdersUserPoolClient
+
+  OrdersUserPoolDomain:
+    Description: Issuer URL of the Cognito User Pool (use the https://.../ prefix as the JWT issuer)
+    Value: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${OrdersUserPool}"

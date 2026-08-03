@@ -1,0 +1,45 @@
+service: appsync-gql
+frameworkVersion: "4"
+
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!venv/**"
+    - "!.venv/**"
+    - "!__pycache__/**"
+    - "!mypy_cache/**"
+    - "!.mypy_cache/**"
+    - "!.serverless/**"
+    - "!pytest_cache/**"
+    - "!tests/**"
+
+provider:
+  name: aws
+  runtime: python3.12
+  stage: dev
+  region: us-east-1
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Scan
+            - dynamodb:Query
+          Resource:
+            - !GetAtt TodosTable.Arn
+            - !GetAtt OrdersTable.Arn
+
+functions:
+  - ${file(functions/index.yml)}
+
+resources:
+  - ${file(resources/dynamodb.yml)}
+  - ${file(resources/cognito.yml)}
+  - ${file(resources/iam.yml)}
+  - ${file(resources/appsync-todos.yml)}
+  - ${file(resources/appsync-orders.yml)}
+  - ${file(resources/outputs.yml)}

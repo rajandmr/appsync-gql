@@ -1,0 +1,13 @@
+[project]
+name = "appsync-gql"
+version = "0.1.0"
+description = "AppSync GraphQL APIs with Python Lambda resolvers backed by DynamoDB"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+dev-dependencies = [
+    "boto3>=1.43.52",
+    "boto3-stubs[essential,dynamodb,cognitoidp,appsync]>=1.43.50",
+]

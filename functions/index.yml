@@ -1,0 +1,41 @@
+# Todos API resolvers (API_KEY auth)
+createTodo:
+  handler: functions/todos/create_todo.handler
+  environment:
+    TODOS_TABLE: !Ref TodosTable
+
+getTodo:
+  handler: functions/todos/get_todo.handler
+  environment:
+    TODOS_TABLE: !Ref TodosTable
+
+listTodos:
+  handler: functions/todos/list_todos.handler
+  environment:
+    TODOS_TABLE: !Ref TodosTable
+
+updateTodo:
+  handler: functions/todos/update_todo.handler
+  environment:
+    TODOS_TABLE: !Ref TodosTable
+
+deleteTodo:
+  handler: functions/todos/delete_todo.handler
+  environment:
+    TODOS_TABLE: !Ref TodosTable
+
+# Orders API resolvers (COGNITO_USER_POOLS + API_KEY auth)
+createOrder:
+  handler: functions/orders/create_order.handler
+  environment:
+    ORDERS_TABLE: !Ref OrdersTable
+
+getOrder:
+  handler: functions/orders/get_order.handler
+  environment:
+    ORDERS_TABLE: !Ref OrdersTable
+
+listOrders:
+  handler: functions/orders/list_orders.handler
+  environment:
+    ORDERS_TABLE: !Ref OrdersTable

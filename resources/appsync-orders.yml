@@ -1,0 +1,132 @@
+Resources:
+  OrdersGraphQLApi:
+    Type: AWS::AppSync::GraphQLApi
+    Properties:
+      Name: appsync-gql-orders
+      AuthenticationType: AMAZON_COGNITO_USER_POOLS
+      LogConfig:
+        CloudWatchLogsRoleArn: !GetAtt AppSyncLogsRole.Arn
+        FieldLogLevel: ALL
+      AdditionalAuthenticationProviders:
+        - AuthenticationType: API_KEY
+      UserPoolConfig:
+        UserPoolId: !Ref OrdersUserPool
+        AwsRegion: !Ref "AWS::Region"
+        DefaultAction: ALLOW
+      XrayEnabled: false
+
+  OrdersGraphQLApiKey:
+    Type: AWS::AppSync::ApiKey
+    Properties:
+      ApiId: !GetAtt OrdersGraphQLApi.ApiId
+      Description: API key for the Orders GraphQL API (read-only)
+
+  OrdersGraphQLSchema:
+    Type: AWS::AppSync::GraphQLSchema
+    Properties:
+      ApiId: !GetAtt OrdersGraphQLApi.ApiId
+      Definition: |
+        type Order
+          @aws_api_key
+          @aws_cognito_user_pools {
+          orderId: ID!
+          customerId: String!
+          total: Float!
+          status: String!
+        }
+
+        type Query
+          @aws_api_key
+          @aws_cognito_user_pools {
+          listOrders: [Order]
+          getOrder(orderId: ID!): Order
+        }
+
+        type Mutation
+          @aws_cognito_user_pools {
+          createOrder(total: Float!, status: String!): Order
+        }
+
+        schema {
+          query: Query
+          mutation: Mutation
+        }
+
+  # ---- Data sources: one AppSync LAMBDA data source per resolver function ----
+
+  OrdersCreateOrderDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt OrdersGraphQLApi.ApiId
+      Name: OrderCreateOrder
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt CreateOrderLambdaFunction.Arn
+      ServiceRoleArn: !GetAtt AppSyncOrdersServiceRole.Arn
+
+  OrdersGetOrderDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt OrdersGraphQLApi.ApiId
+      Name: OrderGetOrder
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt GetOrderLambdaFunction.Arn
+      ServiceRoleArn: !GetAtt AppSyncOrdersServiceRole.Arn
+
+  OrdersListOrdersDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt OrdersGraphQLApi.ApiId
+      Name: OrderListOrders
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt ListOrdersLambdaFunction.Arn
+      ServiceRoleArn: !GetAtt AppSyncOrdersServiceRole.Arn
+
+  # ---- Resolvers ----
+
+  OrdersQueryListResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt OrdersGraphQLApi.ApiId
+      TypeName: Query
+      FieldName: listOrders
+      DataSourceName: !GetAtt OrdersListOrdersDataSource.Name
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": $util.toJson($context)
+        }
+      ResponseMappingTemplate: "$util.toJson($context.result)"
+
+  OrdersQueryGetResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt OrdersGraphQLApi.ApiId
+      TypeName: Query
+      FieldName: getOrder
+      DataSourceName: !GetAtt OrdersGetOrderDataSource.Name
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": $util.toJson($context)
+        }
+      ResponseMappingTemplate: "$util.toJson($context.result)"
+
+  OrdersCreateResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt OrdersGraphQLApi.ApiId
+      TypeName: Mutation
+      FieldName: createOrder
+      DataSourceName: !GetAtt OrdersCreateOrderDataSource.Name
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "operation": "Invoke",
+          "payload": $util.toJson($context)
+        }
+      ResponseMappingTemplate: "$util.toJson($context.result)"

@@ -1,0 +1,25 @@
+type Order
+  @aws_api_key
+  @aws_cognito_user_pools {
+  orderId: ID!
+  customerId: String!
+  total: Float!
+  status: String!
+}
+
+type Query
+  @aws_api_key
+  @aws_cognito_user_pools {
+  listOrders: [Order]
+  getOrder(orderId: ID!): Order
+}
+
+type Mutation
+  @aws_cognito_user_pools {
+  createOrder(total: Float!, status: String!): Order
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+}
