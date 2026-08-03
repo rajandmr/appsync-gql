@@ -153,6 +153,43 @@ npx osls package     # validate + build the CloudFormation package locally
 npx osls remove      # tear the whole stack down
 ```
 
+## Push changes to GitHub
+
+This repository uses the HTTPS GitHub URL for personal access token (PAT)
+authentication. PATs do not authenticate an SSH remote such as
+`git@github.com:...`.
+
+Configure the remote once:
+
+```bash
+git remote add origin https://github.com/rajandmr/appsync-gql.git
+# If origin already exists, use:
+# git remote set-url origin https://github.com/rajandmr/appsync-gql.git
+```
+
+For a VPS, the safest convenient option is Git's in-memory credential cache.
+It keeps the token available to subsequent terminals for eight hours without
+writing it to disk:
+
+```bash
+git config --global credential.helper 'cache --timeout=28800'
+git push -u origin main
+```
+
+When prompted, enter your GitHub username and use the PAT as the password.
+Do not use your GitHub account password. The token should have the minimum
+required repository permissions and a short expiration time.
+
+On macOS, use the system keychain instead:
+
+```bash
+git config --global credential.helper osxkeychain
+git push -u origin main
+```
+
+Never put a PAT in this README, a shell history entry, a Git remote URL, or a
+committed file. Revoke a token immediately if it is exposed.
+
 ## Notes
 
 - The AppSync GraphQL schemas are inlined as `Definition` strings in
