@@ -3,21 +3,46 @@ frameworkVersion: "4"
 
 package:
   patterns:
+    # Include the resolver sources and shared utilities. All third-party
+    # deps (aws_lambda_powertools, pydantic + transitives) come from the
+    # AWSLambdaPowertoolsPythonV3 layer declared below.
+    - "functions/**"
+    - "utils/**"
+    # Exclude everything else (dev tooling, caches, repo metadata).
     - "!node_modules/**"
     - "!venv/**"
     - "!.venv/**"
+    - "!build/**"
+    - "!vendor/**"
     - "!__pycache__/**"
+    - "!**/__pycache__/**"
     - "!mypy_cache/**"
     - "!.mypy_cache/**"
+    - "!.ruff_cache/**"
     - "!.serverless/**"
     - "!pytest_cache/**"
     - "!tests/**"
+    - "!.env"
+    - "!.env.*"
+    - "!.git/**"
+    - "!.gitignore"
+    - "!*.md"
+    - "!Makefile"
+    - "!pyproject.toml"
+    - "!uv.lock"
+    - "!**/*.pyc"
+    - "!**/*.pyo"
 
 provider:
   name: aws
   runtime: python3.12
   stage: dev
   region: us-east-1
+  # All third-party deps (aws_lambda_powertools, pydantic + transitives)
+  # are provided by this official Powertools layer. No PYTHONPATH override
+  # is required: the Lambda runtime auto-adds /opt/python to sys.path.
+  layers:
+    - arn:aws:lambda:us-east-1:017000801446:layer:AWSLambdaPowertoolsPythonV3-python312-x86_64:36
   iam:
     role:
       statements:

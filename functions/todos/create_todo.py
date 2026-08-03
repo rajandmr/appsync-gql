@@ -1,23 +1,22 @@
 import uuid
 from typing import Any
 
+from aws_lambda_powertools.utilities.parser import event_parser
+from aws_lambda_powertools.utilities.typing import LambdaContext
 from utils.helper import logger, table
+from utils.models import Todo, TodoCreateEvent
 
 
-def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    logger.info("createTodo event: %s", event)
+@event_parser(model=TodoCreateEvent)
+def handler(event: TodoCreateEvent, context: LambdaContext) -> dict[str, Any]:
+    logger.info("createTodo", arguments=event.arguments.model_dump())
 
-    arguments = event.get("arguments") or {}
-    title = arguments["title"]
-    completed = bool(arguments.get("completed", False))
+    todo = Todo(
+        id=str(uuid.uuid4()),
+        title=event.arguments.title,
+        completed=event.arguments.completed,
+    )
 
-    item = {
-        "id": str(uuid.uuid4()),
-        "title": title,
-        "completed": completed,
-    }
-
-    todos = table("TODOS_TABLE")
-    todos.put_item(Item=item)
-    logger.info("Created todo %s", item["id"])
-    return item
+    table("TODOS_TABLE").put_item(Item=todo.model_dump())
+    logger.info("created todo", id=todo.id)
+    return todo.model_dump()

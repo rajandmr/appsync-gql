@@ -18,6 +18,28 @@ __pycache__/
 htmlcov/
 build/
 dist/
+vendor/
+# Safety net: ignore stray flattened vendored package dirs at the repo root
+# (no longer produced now that deps come from a Lambda layer, but harmless
+# to keep ignored in case anyone manually vendors).
+aws_lambda_powertools/
+aws_lambda_powertools-*.dist-info/
+pydantic/
+pydantic-*.dist-info/
+pydantic_core/
+pydantic_core-*.dist-info/
+annotated_types/
+annotated_types-*.dist-info/
+annotated_types.py
+jmespath/
+jmespath-*.dist-info/
+typing_extensions/
+typing_extensions-*.dist-info/
+typing_extensions.py
+typing_inspection/
+typing_inspection-*.dist-info/
+# CLI scripts shipped by some vendored packages (e.g. jmespath's bin/jp.py).
+bin/
 
 # Node.js dependencies and logs
 node_modules/

@@ -1,28 +1,27 @@
 import uuid
-from decimal import Decimal
 from typing import Any
 
+from aws_lambda_powertools.utilities.parser import event_parser
+from aws_lambda_powertools.utilities.typing import LambdaContext
+
 from utils.helper import logger, table
+from utils.models import Order, OrderCreateEvent
 
 
-def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    logger.info("createOrder event: %s", event)
+@event_parser(model=OrderCreateEvent)
+def handler(event: OrderCreateEvent, context: LambdaContext) -> dict[str, Any]:
+    logger.info("createOrder", arguments=event.arguments.model_dump(mode="json"))
 
-    arguments = event.get("arguments") or {}
-    identity = event.get("identity") or {}
+    assert event.identity is not None  # guaranteed by @aws_cognito_user_pools
+    customer_id = event.identity["sub"]
 
-    # When called via COGNITO_USER_POOLS, identity.sub holds the user's Cognito sub.
-    customer_id = identity.get("sub") or identity.get("username") or "anonymous"
+    order = Order(
+        orderId=str(uuid.uuid4()),
+        customerId=customer_id,
+        total=event.arguments.total,
+        status=event.arguments.status,
+    )
 
-    item = {
-        "orderId": str(uuid.uuid4()),
-        "customerId": customer_id,
-        # DynamoDB's high-level resource API requires Decimal for numbers.
-        "total": Decimal(str(arguments["total"])),
-        "status": arguments.get("status", "PENDING"),
-    }
-
-    orders = table("ORDERS_TABLE")
-    orders.put_item(Item=item)
-    logger.info("Created order %s for customer %s", item["orderId"], item["customerId"])
-    return item
+    table("ORDERS_TABLE").put_item(Item=order.model_dump())
+    logger.info("created order", orderId=order.orderId, customerId=order.customerId)
+    return order.model_dump()

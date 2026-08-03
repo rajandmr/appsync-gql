@@ -1,18 +1,18 @@
 from typing import Any
 
+from aws_lambda_powertools.utilities.parser import event_parser
+from aws_lambda_powertools.utilities.typing import LambdaContext
 from utils.helper import logger, table
+from utils.models import Order, OrderIdEvent
 
 
-def handler(event: dict[str, Any], context: Any) -> dict[str, Any] | None:
-    logger.info("getOrder event: %s", event)
+@event_parser(model=OrderIdEvent)
+def handler(event: OrderIdEvent, context: LambdaContext) -> dict[str, Any] | None:
+    logger.info("getOrder", orderId=event.arguments.orderId)
 
-    arguments = event.get("arguments") or {}
-    order_id = arguments["orderId"]
-
-    orders = table("ORDERS_TABLE")
-    response = orders.get_item(Key={"orderId": order_id})
+    response = table("ORDERS_TABLE").get_item(Key={"orderId": event.arguments.orderId})
     item = response.get("Item")
     if item is None:
-        logger.info("Order %s not found", order_id)
+        logger.info("order not found", orderId=event.arguments.orderId)
         return None
-    return item
+    return Order.model_validate(item).model_dump()

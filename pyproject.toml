@@ -4,10 +4,63 @@ version = "0.1.0"
 description = "AppSync GraphQL APIs with Python Lambda resolvers backed by DynamoDB"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
-
-[tool.uv]
-dev-dependencies = [
-    "boto3>=1.43.52",
-    "boto3-stubs[essential,dynamodb,cognitoidp,appsync]>=1.43.50",
+dependencies = [
+    # Provided to Lambdas at runtime via the AWSLambdaPowertoolsPythonV3
+    # Lambda layer declared in serverless.yml. Listed here so local dev
+    # tooling (mypy, ruff) can resolve imports from `uv sync`.
+    "aws-lambda-powertools[parser]>=3.0.0",
 ]
+
+[dependency-groups]
+dev = [
+    "boto3>=1.43.52",
+    "boto3-stubs[essential,dynamodb,appsync]>=1.43.50",
+    "mypy>=1.10",
+    "pydantic>=2.6",
+    "ruff>=0.6",
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+# Powertools' `@event_parser` is built on `lambda_handler_decorator`, whose
+# return type is bare `Callable`; mypy therefore flags the decorator as
+# untyped. Handlers themselves are fully typed, so relax just this strict
+# flag to avoid false positives drowning real issues.
+disallow_untyped_decorators = false
+exclude = [
+    "^\\.venv/",
+    "^\\.serverless/",
+    "^build/",
+    "^vendor/",
+]
+
+# Powertools ships its own type stubs; boto3 typed via boto3-stubs in dev.
+[[tool.mypy.overrides]]
+module = ["boto3", "botocore.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [".venv", ".serverless", "build", "vendor", "bin"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]  # line length handled by formatter
+
+[tool.ruff.lint.per-file-ignores]
+"functions/**" = []
+
+# Pyright (used by nvim's LSP) runs in its own bundled Python and needs to be
+# pointed at the project venv so it can resolve runtime + dev dependencies.
+# `venvPath` is the parent directory, `venv` is the venv folder name.
+[tool.pyright]
+pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
+include = ["functions", "utils"]
+exclude = [".venv", ".serverless", "build", "vendor"]

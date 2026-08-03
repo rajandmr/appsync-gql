@@ -1,18 +1,20 @@
 from typing import Any
 
+from aws_lambda_powertools.utilities.parser import event_parser
+from aws_lambda_powertools.utilities.typing import LambdaContext
 from utils.helper import logger, table
+from utils.models import Todo, TodoIdEvent
 
 
-def handler(event: dict[str, Any], context: Any) -> dict[str, Any] | None:
-    logger.info("deleteTodo event: %s", event)
+@event_parser(model=TodoIdEvent)
+def handler(event: TodoIdEvent, context: LambdaContext) -> dict[str, Any] | None:
+    logger.info("deleteTodo", id=event.arguments.id)
 
-    arguments = event.get("arguments") or {}
-    todo_id = arguments["id"]
-
-    todos = table("TODOS_TABLE")
-    response = todos.delete_item(Key={"id": todo_id}, ReturnValues="ALL_OLD")
+    response = table("TODOS_TABLE").delete_item(
+        Key={"id": event.arguments.id}, ReturnValues="ALL_OLD"
+    )
     item = response.get("Attributes")
     if item is None:
-        logger.info("Todo %s not found on delete", todo_id)
+        logger.info("todo not found on delete", id=event.arguments.id)
         return None
-    return item
+    return Todo.model_validate(item).model_dump()
