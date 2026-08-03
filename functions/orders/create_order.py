@@ -12,7 +12,11 @@ from utils.models import Order, OrderCreateEvent
 def handler(event: OrderCreateEvent, context: LambdaContext) -> dict[str, Any]:
     logger.info("createOrder", arguments=event.arguments.model_dump(mode="json"))
 
-    assert event.identity is not None  # guaranteed by @aws_cognito_user_pools
+    if event.identity is None:
+        # @aws_cognito_user_pools on the schema should make this unreachable,
+        # but guard explicitly rather than relying on assert (stripped by -O).
+        raise RuntimeError("createOrder requires an authenticated Cognito identity")
+
     customer_id = event.identity["sub"]
 
     order = Order(
@@ -22,6 +26,7 @@ def handler(event: OrderCreateEvent, context: LambdaContext) -> dict[str, Any]:
         status=event.arguments.status,
     )
 
-    table("ORDERS_TABLE").put_item(Item=order.model_dump())
+    payload = order.model_dump()
+    table("ORDERS_TABLE").put_item(Item=payload)
     logger.info("created order", orderId=order.orderId, customerId=order.customerId)
-    return order.model_dump()
+    return payload

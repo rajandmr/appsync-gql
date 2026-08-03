@@ -1,17 +1,15 @@
 """Shared helpers for AppSync Lambda resolvers.
 
-Uses AWS Lambda Powertools' structured `Logger` and a typed DynamoDB
+Uses AWS Lambda Powertools' structured `Logger` and a cached, typed DynamoDB
 `Table` resource accessor powered by `mypy_boto3_dynamodb`.
 """
 
 from __future__ import annotations
 
-import json
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import boto3
-
 from aws_lambda_powertools import Logger
 
 if TYPE_CHECKING:
@@ -21,10 +19,10 @@ if TYPE_CHECKING:
 
 logger = Logger(service=os.getenv("POWERTOOLS_SERVICE_NAME", "appsync-gql"))
 
-
-def log_event(event: dict[str, Any]) -> None:
-    """Pretty-print an incoming event for debugging at INFO level."""
-    logger.info("incoming_event", event=json.dumps(event, default=str))
+# boto3.resource() builds a Session internally; reuse one across warm
+# Lambda invocations instead of reconstructing on every call.
+_dynamodb = boto3.resource("dynamodb")
+_tables: dict[str, Table] = {}
 
 
 def table(name_env: str = "TODOS_TABLE") -> Table:
@@ -32,23 +30,13 @@ def table(name_env: str = "TODOS_TABLE") -> Table:
 
     Resolvers call this once at handler scope so each Lambda reads its
     table from its own environment (e.g. ``TODOS_TABLE``/``ORDERS_TABLE``).
+    Table objects are cached per (env-name) so warm invocations skip the
+    lookup.
     """
-    return boto3.resource("dynamodb").Table(os.environ[name_env])
-
-
-def response(status_code: int, body: dict[str, Any]) -> dict[str, Any]:
-    """HTTP-style response helper (kept for parity / HTTP-triggered helpers).
-
-    AppSync direct-Lambda resolvers do not require this HTTP envelope, but
-    it is kept around for any HTTP-triggered helpers or tests added later.
-    """
-    return {
-        "statusCode": status_code,
-        "headers": {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Allow-Methods": "*",
-            "Content-Type": "application/json",
-        },
-        "body": json.dumps(body),
-    }
+    table_name = os.environ[name_env]
+    cached = _tables.get(table_name)
+    if cached is not None:
+        return cached
+    resolved = _dynamodb.Table(table_name)
+    _tables[table_name] = resolved
+    return resolved

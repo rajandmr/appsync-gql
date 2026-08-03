@@ -90,7 +90,7 @@ curl --fail-with-body -sS "$TODOS_URL" \
 curl --fail-with-body -sS "$TODOS_URL" \
   --header "x-api-key: $TODOS_KEY" \
   --header 'Content-Type: application/json' \
-  --data "{\"query\":\"mutation { updateTodo(id:\\\"$TODO_ID\\\",title:\\\"updated\",completed:true){ id title completed } }\"}"
+  --data "{\"query\":\"mutation { updateTodo(id:\\\"$TODO_ID\\\",title:\\\"updated\\\",completed:true){ id title completed } }\"}"
 
 curl --fail-with-body -sS "$TODOS_URL" \
   --header "x-api-key: $TODOS_KEY" \

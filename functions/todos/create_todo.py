@@ -3,6 +3,7 @@ from typing import Any
 
 from aws_lambda_powertools.utilities.parser import event_parser
 from aws_lambda_powertools.utilities.typing import LambdaContext
+
 from utils.helper import logger, table
 from utils.models import Todo, TodoCreateEvent
 
@@ -17,6 +18,7 @@ def handler(event: TodoCreateEvent, context: LambdaContext) -> dict[str, Any]:
         completed=event.arguments.completed,
     )
 
-    table("TODOS_TABLE").put_item(Item=todo.model_dump())
+    payload = todo.model_dump()
+    table("TODOS_TABLE").put_item(Item=payload)
     logger.info("created todo", id=todo.id)
-    return todo.model_dump()
+    return payload

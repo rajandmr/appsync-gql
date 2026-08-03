@@ -14,6 +14,15 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+def _coerce_decimal(v: Any) -> Decimal:
+    """Coerce a numeric input to Decimal via str() to avoid binary-float drift.
+
+    AppSync ships floats on the wire; DynamoDB needs Decimal. `str(v)`
+    preserves source precision (e.g. 19.99 -> "19.99" -> Decimal("19.99")).
+    """
+    return Decimal(str(v))
+
+
 class AppSyncEvent[ArgsT](BaseModel):
     """Typed envelope for an AppSync direct-Lambda resolver event.
 
@@ -94,9 +103,7 @@ class Order(BaseModel):
     @field_validator("total", mode="before")
     @classmethod
     def _coerce_total(cls, v: Any) -> Decimal:
-        # AppSync sends floats; DynamoDB needs Decimal. str() avoids binary
-        # float precision drift (e.g. 19.99 -> "19.99" -> Decimal("19.99")).
-        return Decimal(str(v))
+        return _coerce_decimal(v)
 
 
 class OrderCreateArgs(BaseModel):
@@ -110,7 +117,7 @@ class OrderCreateArgs(BaseModel):
     @field_validator("total", mode="before")
     @classmethod
     def _coerce_total(cls, v: Any) -> Decimal:
-        return Decimal(str(v))
+        return _coerce_decimal(v)
 
 
 class OrderIdArgs(BaseModel):
